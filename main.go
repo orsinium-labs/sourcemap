@@ -33,7 +33,7 @@ func main() {
 	// parse CLI arguments
 	var err error
 	var output string
-	flags := pflag.NewFlagSet("sourcemap", pflag.ExitOnError)
+	flags := pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
 	flags.StringVar(&output, "output", "sources", "directory where to write the results to")
 	err = flags.Parse(os.Args[1:])
 	if err != nil {
@@ -44,7 +44,7 @@ func main() {
 	wg := sync.WaitGroup{}
 	urls := make(chan string)
 	maps := make(chan RawMap)
-	logger, err := zap.NewDevelopment()
+	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Printf("cannot create logger %v:", err)
 		return

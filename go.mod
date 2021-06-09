@@ -1,4 +1,4 @@
-module github.com/orsinium-labs/source-map
+module github.com/orsinium-labs/sourcemap
 
 go 1.16
 
