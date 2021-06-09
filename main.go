@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/spf13/pflag"
@@ -19,7 +20,11 @@ func emit_urls(logger *zap.Logger, urls chan string) {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			urls <- scanner.Text()
+			url := scanner.Text()
+			url = strings.TrimSpace(url)
+			if url != "" {
+				urls <- url
+			}
 		}
 		if err := scanner.Err(); err != nil {
 			logger.Error("cannot read stdin", zap.Error(err))
