@@ -26,6 +26,9 @@ type Explorer struct {
 }
 
 func (ex *Explorer) log(msg string, err error) {
+	if err == colly.ErrAlreadyVisited {
+		return
+	}
 	if err != nil {
 		ex.Logger.Error(msg, zap.Error(err))
 	}

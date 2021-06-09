@@ -46,10 +46,10 @@ func main() {
 		return
 	}
 
-	wg := sync.WaitGroup{}
-	urls := make(chan string)
-	maps := make(chan RawMap)
-	logger, err := zap.NewProduction()
+	// create logger
+	c := zap.NewDevelopmentConfig()
+	c.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	logger, err := c.Build(zap.AddStacktrace(zap.PanicLevel))
 	if err != nil {
 		log.Printf("cannot create logger %v:", err)
 		return
@@ -60,6 +60,10 @@ func main() {
 			log.Printf("cannot sync logs: %v", err)
 		}
 	}()
+
+	wg := sync.WaitGroup{}
+	urls := make(chan string)
+	maps := make(chan RawMap)
 
 	// read URLs from stdin
 	wg.Add(1)
