@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var rex = regexp.MustCompile(`//\s*sourceMappingURL\s*=\s*(.*)\s*$`)
+var rex = regexp.MustCompile(`//#\s*sourceMappingURL=(.*)\s*$`)
 
 type RawMap struct {
 	Content []byte
@@ -51,19 +51,25 @@ func (ex *Explorer) Init() {
 		f := zap.String("url", resp.Request.URL.String())
 		ex.Logger.Debug("checking script", f)
 		var h string
+
 		h = resp.Headers.Get("X-SourceMap")
 		if h != "" {
-			ex.log("map collector", ex.mapC.Visit(h))
+			url := resp.Request.AbsoluteURL(h)
+			ex.log("map collector", ex.mapC.Visit(url))
 			return
 		}
+
 		h = resp.Headers.Get("SourceMap")
 		if h != "" {
-			ex.log("map collector", ex.mapC.Visit(h))
+			url := resp.Request.AbsoluteURL(h)
+			ex.log("map collector", ex.mapC.Visit(url))
 			return
 		}
+
 		match := rex.FindSubmatch(resp.Body)
 		if match != nil {
-			ex.log("map collector", ex.mapC.Visit(string(match[1])))
+			url := resp.Request.AbsoluteURL(string(match[1]))
+			ex.log("map collector", ex.mapC.Visit(url))
 			return
 		}
 		ex.Logger.Debug("no source map found", f)
@@ -95,4 +101,5 @@ func (ex *Explorer) Run() {
 		}(url)
 	}
 	wg.Wait()
+	close(ex.Maps)
 }

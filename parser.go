@@ -18,6 +18,7 @@ type SourceMap struct {
 type Parser struct {
 	Maps   chan RawMap
 	Logger *zap.Logger
+	Output string
 }
 
 func (p *Parser) Run() {
@@ -38,14 +39,14 @@ func (p *Parser) parse(raw RawMap) error {
 	}
 	for i, fname := range m.FileNames {
 		fname = strings.ReplaceAll(fname, "../", ".")
-		fname = path.Join(raw.Host, fname)
+		fname = path.Join(p.Output, raw.Host, fname)
 		parent, _ := path.Split(fname)
-		err = os.MkdirAll(parent, 0x770)
+		err = os.MkdirAll(parent, 0770)
 		if err != nil {
 			return fmt.Errorf("create dir: %v", err)
 		}
 		p.Logger.Debug("writing file", zap.String("path", fname))
-		err = os.WriteFile(fname, []byte(m.Contents[i]), 0x660)
+		err = os.WriteFile(fname, []byte(m.Contents[i]), 0660)
 		if err != nil {
 			return fmt.Errorf("write file: %v", err)
 		}

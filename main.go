@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 )
 
@@ -25,9 +26,21 @@ func emit_urls(logger *zap.Logger, urls chan string) {
 			return
 		}
 	}
+	close(urls)
 }
 
 func main() {
+	// parse CLI arguments
+	var err error
+	var output string
+	flags := pflag.NewFlagSet("sourcemap", pflag.ExitOnError)
+	flags.StringVar(&output, "output", "sources", "directory where to write the results to")
+	err = flags.Parse(os.Args[1:])
+	if err != nil {
+		log.Printf("cannot create logger %v:", err)
+		return
+	}
+
 	wg := sync.WaitGroup{}
 	urls := make(chan string)
 	maps := make(chan RawMap)
@@ -43,12 +56,14 @@ func main() {
 		}
 	}()
 
+	// read URLs from stdin
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		emit_urls(logger, urls)
 	}()
 
+	// start explorer, discover source maps
 	ex := Explorer{
 		URLs:   urls,
 		Maps:   maps,
@@ -61,9 +76,11 @@ func main() {
 		ex.Run()
 	}()
 
+	// run parser, parse source maps and save resulting files
 	p := Parser{
 		Maps:   maps,
 		Logger: logger,
+		Output: output,
 	}
 	wg.Add(1)
 	go func() {
