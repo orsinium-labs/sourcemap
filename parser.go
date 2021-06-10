@@ -42,7 +42,7 @@ func (p *Parser) parse(raw RawMap) error {
 		fname = strings.ReplaceAll(fname, "../", ".")
 		fname = strings.ReplaceAll(fname, "webpack://", "")
 		fname = strings.ReplaceAll(fname, "://", "")
-		fname = path.Join(p.Output, raw.Host, fname)
+		fname = path.Join(p.Output, raw.URL.Hostname(), fname)
 
 		if i >= len(m.Contents) {
 			return errors.New("sources is longer than sourcesContent")
@@ -63,5 +63,19 @@ func (p *Parser) parse(raw RawMap) error {
 			return fmt.Errorf("write file: %v", err)
 		}
 	}
+
+	// save into _sources.txt the source map URL
+	fname := path.Join(p.Output, raw.URL.Hostname(), "_sources.txt")
+	p.Logger.Debug("writing _sources.txt", zap.String("path", fname))
+	f, err := os.OpenFile(fname, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
+	if err != nil {
+		return fmt.Errorf("open _sources.txt: %v", err)
+	}
+	defer f.Close()
+	_, err = f.WriteString(raw.URL.String() + "\n")
+	if err != nil {
+		return fmt.Errorf("write _sources.txt: %v", err)
+	}
+
 	return nil
 }

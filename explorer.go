@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/url"
 	"regexp"
 	"sync"
 
@@ -13,6 +14,7 @@ var rex = regexp.MustCompile(`//#\s*sourceMappingURL=(.*)\s*$`)
 type RawMap struct {
 	Content []byte
 	Host    string
+	URL     *url.URL
 }
 
 type Explorer struct {
@@ -89,7 +91,7 @@ func (ex *Explorer) Init() {
 		ex.Logger.Info("source map detected", f)
 		ex.Maps <- RawMap{
 			Content: resp.Body,
-			Host:    resp.Request.URL.Hostname(),
+			URL:     resp.Request.URL,
 		}
 	})
 }
