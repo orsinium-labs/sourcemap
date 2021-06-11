@@ -12,9 +12,8 @@ import (
 
 func (c *Collector) runPages() {
 	wg := sync.WaitGroup{}
-	wg.Add(c.Workers)
 	for i := 0; i < c.Workers; i++ {
-		go c.workerPages()
+		c.spawn(&wg, c.workerPages)
 	}
 	wg.Wait()
 	close(c.scripts)

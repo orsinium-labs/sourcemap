@@ -13,9 +13,8 @@ import (
 
 func (c *Collector) runScripts() {
 	wg := sync.WaitGroup{}
-	wg.Add(c.Workers)
 	for i := 0; i < c.Workers; i++ {
-		go c.workerScripts()
+		c.spawn(&wg, c.workerScripts)
 	}
 	wg.Wait()
 	close(c.maps)

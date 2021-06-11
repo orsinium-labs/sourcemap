@@ -67,7 +67,7 @@ func main() {
 	collector.Logger.Debug("debug messages enabled")
 	defer func() {
 		err := collector.Logger.Sync()
-		if err != nil {
+		if err != nil && err.Error() != "sync /dev/stderr: invalid argument" {
 			log.Printf("cannot sync logs: %v", err)
 		}
 	}()

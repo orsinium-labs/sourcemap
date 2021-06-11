@@ -16,9 +16,8 @@ import (
 
 func (c *Collector) runMaps() {
 	wg := sync.WaitGroup{}
-	wg.Add(c.Workers)
 	for i := 0; i < c.Workers; i++ {
-		go c.workerMaps()
+		c.spawn(&wg, c.workerMaps)
 	}
 	wg.Wait()
 	close(c.infos)
