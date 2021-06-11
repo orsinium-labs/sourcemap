@@ -2,13 +2,10 @@ package main
 
 import (
 	"net/url"
-	"regexp"
 	"sync"
 
 	"go.uber.org/zap"
 )
-
-var rex = regexp.MustCompile(`//#\s*sourceMappingURL=(.*)\s*$`)
 
 func zapURL(u *url.URL) zap.Field {
 	return zap.String("url", u.String())

@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var rex = regexp.MustCompile(`//#\s*sourceMappingURL=(.*\.map)[\s\x00$]`)
+
 func (c *Collector) runScripts() {
 	wg := sync.WaitGroup{}
 	for i := 0; i < c.Workers; i++ {
@@ -43,7 +45,10 @@ func (c *Collector) handleScript(surl *url.URL) error {
 	}
 	if murl == "" {
 		// get source map url from comments
-		murl = c.find(rex, resp.Body)
+		murl, err = c.find(rex, resp.Body)
+		if err != nil {
+			return fmt.Errorf("read response body: %v", err)
+		}
 	}
 
 	if murl != "" {
@@ -54,21 +59,24 @@ func (c *Collector) handleScript(surl *url.URL) error {
 		c.maps <- murl
 		return nil
 	}
-
+	c.Logger.Debug("no source map found", zapURL(surl))
 	return nil
 }
 
-func (Collector) find(rex *regexp.Regexp, stream io.Reader) string {
+func (Collector) find(rex *regexp.Regexp, stream io.Reader) (string, error) {
 	prev := make([]byte, 1024)
-	curr := make([]byte, 1024)
 	for {
-		_, err := stream.Read(curr)
-		if err == io.EOF {
-			return ""
+		curr := make([]byte, 1024)
+		n, err := stream.Read(curr)
+		if n == 0 {
+			return "", nil
+		}
+		if err != nil && err != io.EOF {
+			return "", err
 		}
 		match := rex.FindSubmatch(append(prev, curr...))
 		if match != nil {
-			return string(match[1])
+			return string(match[1]), nil
 		}
 		prev = curr
 	}
