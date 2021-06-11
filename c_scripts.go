@@ -26,7 +26,7 @@ func (c *Collector) workerScripts() {
 	for url := range c.scripts {
 		err := c.handleScript(url)
 		if err != nil {
-			c.Logger.Error("script handler error", zap.Error(err))
+			c.Logger.Error("script handler error", zap.Error(err), zapURL(url))
 		}
 	}
 }
@@ -36,6 +36,9 @@ func (c *Collector) handleScript(surl *url.URL) error {
 	resp, err := http.Get(surl.String())
 	if err != nil {
 		return fmt.Errorf("make http request: %v", err)
+	}
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("invalid response: %s", resp.Status)
 	}
 
 	// get source map url from headers

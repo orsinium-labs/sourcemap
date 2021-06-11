@@ -23,7 +23,7 @@ func (c *Collector) workerPages() {
 	for url := range c.pages {
 		err := c.handlePage(url)
 		if err != nil {
-			c.Logger.Error("page handler error", zap.Error(err))
+			c.Logger.Error("page handler error", zap.Error(err), zapURL(url))
 		}
 	}
 }
