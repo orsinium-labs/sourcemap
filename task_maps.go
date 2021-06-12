@@ -9,31 +9,32 @@ import (
 	"os"
 	"path"
 	"strings"
-	"sync"
 
 	"go.uber.org/zap"
 )
 
-func (c *Collector) runMaps() {
-	wg := sync.WaitGroup{}
-	for i := 0; i < c.Workers; i++ {
-		c.spawn(&wg, c.workerMaps)
-	}
-	wg.Wait()
-	close(c.infos)
+// TaskMaps consumes source maps URLs and extracts them into the file system
+type TaskMaps struct {
+	Logger *zap.Logger
+	Output string
+	In     chan *url.URL
+	Out    chan *url.URL
 }
 
-func (c *Collector) workerMaps() {
-	for url := range c.maps {
-		err := c.handleMap(url)
-		if err != nil {
-			c.Logger.Error("map handler error", zap.Error(err), zapURL(url))
-		}
-	}
+func (TaskMaps) Name() string {
+	return "maps"
 }
 
-func (c *Collector) handleMap(surl *url.URL) error {
-	c.Logger.Debug("reading map", zapURL(surl))
+func (task *TaskMaps) Finish() {
+	close(task.Out)
+}
+
+func (task *TaskMaps) URLs() <-chan *url.URL {
+	return task.In
+}
+
+func (task *TaskMaps) Run(surl *url.URL) error {
+	task.Logger.Debug("reading map", zapURL(surl))
 	resp, err := http.Get(surl.String())
 	if err != nil {
 		return fmt.Errorf("make http request: %v", err)
@@ -52,7 +53,7 @@ func (c *Collector) handleMap(surl *url.URL) error {
 		fname = strings.ReplaceAll(fname, "../", ".")
 		fname = strings.ReplaceAll(fname, "webpack://", "")
 		fname = strings.ReplaceAll(fname, "://", "")
-		fname = path.Join(c.Output, surl.Hostname(), fname)
+		fname = path.Join(task.Output, surl.Hostname(), fname)
 
 		if i >= len(m.Contents) {
 			return errors.New("sources is longer than sourcesContent")
@@ -67,13 +68,13 @@ func (c *Collector) handleMap(surl *url.URL) error {
 			return fmt.Errorf("create dir: %v", err)
 		}
 
-		c.Logger.Debug("writing file", zap.String("path", fname))
+		task.Logger.Debug("writing file", zap.String("path", fname))
 		err = os.WriteFile(fname, []byte(m.Contents[i]), 0660)
 		if err != nil {
 			return fmt.Errorf("write file: %v", err)
 		}
 	}
 
-	c.infos <- surl
+	task.Out <- surl
 	return nil
 }

@@ -4,32 +4,32 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 	"go.uber.org/zap"
 )
 
-func (c *Collector) runPages() {
-	wg := sync.WaitGroup{}
-	for i := 0; i < c.Workers; i++ {
-		c.spawn(&wg, c.workerPages)
-	}
-	wg.Wait()
-	close(c.scripts)
+// TaskPages consumes HTML and extracts JS scripts URLs
+type TaskPages struct {
+	Logger *zap.Logger
+	In     chan *url.URL
+	Out    chan *url.URL
 }
 
-func (c *Collector) workerPages() {
-	for url := range c.pages {
-		err := c.handlePage(url)
-		if err != nil {
-			c.Logger.Error("page handler error", zap.Error(err), zapURL(url))
-		}
-	}
+func (TaskPages) Name() string {
+	return "pages"
 }
 
-func (c *Collector) handlePage(purl *url.URL) error {
-	c.Logger.Debug("checking page", zapURL(purl))
+func (task *TaskPages) Finish() {
+	close(task.Out)
+}
+
+func (task *TaskPages) URLs() <-chan *url.URL {
+	return task.In
+}
+
+func (task *TaskPages) Run(purl *url.URL) error {
+	task.Logger.Debug("checking page", zapURL(purl))
 	resp, err := http.Get(purl.String())
 	if err != nil {
 		return fmt.Errorf("make http request: %v", err)
@@ -48,7 +48,7 @@ func (c *Collector) handlePage(purl *url.URL) error {
 				qerr = err
 				return
 			}
-			c.scripts <- surl
+			task.Out <- surl
 		}
 		surl, _ = s.Attr("data-src")
 		if surl != "" {
@@ -57,7 +57,7 @@ func (c *Collector) handlePage(purl *url.URL) error {
 				qerr = err
 				return
 			}
-			c.scripts <- surl
+			task.Out <- surl
 		}
 	})
 	if qerr != nil {
