@@ -6,14 +6,12 @@ import (
 	"net/url"
 
 	"github.com/PuerkitoBio/goquery"
-	"go.uber.org/zap"
 )
 
 // TaskPages consumes HTML and extracts JS scripts URLs
 type TaskPages struct {
-	Logger *zap.Logger
-	In     chan *url.URL
-	Out    chan *url.URL
+	In  chan *url.URL
+	Out chan *url.URL
 }
 
 func (TaskPages) Name() string {
@@ -29,7 +27,6 @@ func (task *TaskPages) URLs() <-chan *url.URL {
 }
 
 func (task *TaskPages) Run(purl *url.URL) error {
-	task.Logger.Debug("checking page", zapURL(purl))
 	resp, err := http.Get(purl.String())
 	if err != nil {
 		return fmt.Errorf("make http request: %v", err)

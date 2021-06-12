@@ -32,7 +32,6 @@ func (task *TaskScripts) URLs() <-chan *url.URL {
 }
 
 func (c *TaskScripts) Run(surl *url.URL) error {
-	c.Logger.Debug("checking script", zapURL(surl))
 	resp, err := http.Get(surl.String())
 	if err != nil {
 		return fmt.Errorf("make http request: %v", err)

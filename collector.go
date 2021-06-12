@@ -56,9 +56,8 @@ func (c *Collector) Run() {
 	infos := make(chan *url.URL)
 
 	c.spawn(&wg, c.runWorkers, &TaskPages{
-		Logger: c.Logger,
-		In:     c.pages,
-		Out:    scripts,
+		In:  c.pages,
+		Out: scripts,
 	})
 	c.spawn(&wg, c.runWorkers, &TaskScripts{
 		Logger: c.Logger,
@@ -66,13 +65,11 @@ func (c *Collector) Run() {
 		Out:    maps,
 	})
 	c.spawn(&wg, c.runWorkers, &TaskMaps{
-		Logger: c.Logger,
 		Output: c.Output,
 		In:     maps,
 		Out:    infos,
 	})
 	c.worker(&TaskInfos{
-		Logger: c.Logger,
 		Output: c.Output,
 		In:     infos,
 	})
@@ -98,6 +95,11 @@ func (c *Collector) runWorkers(task Task) {
 
 func (c *Collector) worker(task Task) {
 	for url := range task.URLs() {
+		c.Logger.Debug(
+			"running task",
+			zap.String("task", task.Name()),
+			zapURL(url),
+		)
 		err := task.Run(url)
 		if err != nil {
 			c.Logger.Error(

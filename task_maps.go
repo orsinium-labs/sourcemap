@@ -9,13 +9,10 @@ import (
 	"os"
 	"path"
 	"strings"
-
-	"go.uber.org/zap"
 )
 
 // TaskMaps consumes source maps URLs and extracts them into the file system
 type TaskMaps struct {
-	Logger *zap.Logger
 	Output string
 	In     chan *url.URL
 	Out    chan *url.URL
@@ -34,7 +31,6 @@ func (task *TaskMaps) URLs() <-chan *url.URL {
 }
 
 func (task *TaskMaps) Run(surl *url.URL) error {
-	task.Logger.Debug("reading map", zapURL(surl))
 	resp, err := http.Get(surl.String())
 	if err != nil {
 		return fmt.Errorf("make http request: %v", err)
@@ -68,7 +64,6 @@ func (task *TaskMaps) Run(surl *url.URL) error {
 			return fmt.Errorf("create dir: %v", err)
 		}
 
-		task.Logger.Debug("writing file", zap.String("path", fname))
 		err = os.WriteFile(fname, []byte(m.Contents[i]), 0660)
 		if err != nil {
 			return fmt.Errorf("write file: %v", err)
