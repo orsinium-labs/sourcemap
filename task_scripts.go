@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sync"
 
 	"go.uber.org/zap"
 )
@@ -14,9 +15,11 @@ var rex = regexp.MustCompile(`//#\s*sourceMappingURL=(.*\.map)[\s\x00$]`)
 
 // TaskScripts consumes JS scripts and extracts source map URLs
 type TaskScripts struct {
-	Logger *zap.Logger
-	In     chan *url.URL
-	Out    chan *url.URL
+	Logger  *zap.Logger
+	In      chan *url.URL
+	Out     chan *url.URL
+	Visited map[string]struct{}
+	Mutex   *sync.Mutex
 }
 
 func (TaskScripts) Name() string {
@@ -31,7 +34,10 @@ func (task *TaskScripts) URLs() <-chan *url.URL {
 	return task.In
 }
 
-func (c *TaskScripts) Run(surl *url.URL) error {
+func (task *TaskScripts) Run(surl *url.URL) error {
+	if task.visited(surl.String()) {
+		return nil
+	}
 	resp, err := http.Get(surl.String())
 	if err != nil {
 		return fmt.Errorf("make http request: %v", err)
@@ -47,7 +53,7 @@ func (c *TaskScripts) Run(surl *url.URL) error {
 	}
 	if murl == "" {
 		// get source map url from comments
-		murl, err = c.find(rex, resp.Body)
+		murl, err = task.find(rex, resp.Body)
 		if err != nil {
 			return fmt.Errorf("read response body: %v", err)
 		}
@@ -58,11 +64,22 @@ func (c *TaskScripts) Run(surl *url.URL) error {
 		if err != nil {
 			return fmt.Errorf("parse source map url: %v", err)
 		}
-		c.Out <- murl
+		task.Out <- murl
 		return nil
 	}
-	c.Logger.Debug("no source map found", zapURL(surl))
+	task.Logger.Debug("no source map found", zapURL(surl))
 	return nil
+}
+
+func (task *TaskScripts) visited(url string) bool {
+	task.Mutex.Lock()
+	defer task.Mutex.Unlock()
+	_, visited := task.Visited[url]
+	if visited {
+		return true
+	}
+	task.Visited[url] = struct{}{}
+	return false
 }
 
 func (TaskScripts) find(rex *regexp.Regexp, stream io.Reader) (string, error) {

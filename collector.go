@@ -60,9 +60,11 @@ func (c *Collector) Run() {
 		Out: scripts,
 	})
 	c.spawn(&wg, c.runWorkers, &TaskScripts{
-		Logger: c.Logger,
-		In:     scripts,
-		Out:    maps,
+		Logger:  c.Logger,
+		In:      scripts,
+		Out:     maps,
+		Visited: make(map[string]struct{}),
+		Mutex:   &sync.Mutex{},
 	})
 	c.spawn(&wg, c.runWorkers, &TaskMaps{
 		Output: c.Output,
