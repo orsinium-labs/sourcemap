@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -39,7 +40,7 @@ func (task *TaskPages) Run(purl *url.URL) error {
 	var qerr error
 	doc.Find("script").Each(func(i int, s *goquery.Selection) {
 		surl, _ := s.Attr("src")
-		if surl != "" {
+		if surl != "" && !strings.HasPrefix(surl, "data:text/javascript,") {
 			surl, err := purl.Parse(surl)
 			if err != nil {
 				qerr = err
@@ -48,7 +49,7 @@ func (task *TaskPages) Run(purl *url.URL) error {
 			task.Out <- surl
 		}
 		surl, _ = s.Attr("data-src")
-		if surl != "" {
+		if surl != "" && !strings.HasPrefix(surl, "data:text/javascript,") {
 			surl, err := purl.Parse(surl)
 			if err != nil {
 				qerr = err
